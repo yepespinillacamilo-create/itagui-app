@@ -392,11 +392,15 @@ export default function ColaboradoresPage() {
                         {col.cedula && col.celular && <span className="mx-1">·</span>}
                         {col.celular && <span>{col.celular}</span>}
                       </p>
-                      {/* Badges MIRA / FIMLM */}
-                      <div className="flex gap-1 mt-1 flex-wrap">
+                      {/* Badges por categoría con colores */}
+                      <div className="flex gap-1 mt-1.5 flex-wrap">
+                        {col.dones?.slice(0,2).map((d) => <Badge key={d} label={d} color="#C8A24A" />)}
+                        {col.labores?.slice(0,2).map((l) => <Badge key={l} label={l} color="#7C3AED" />)}
+                        {(col.labores?.length ?? 0) > 2 && (
+                          <Badge label={`+${col.labores.length - 2} labores`} color="#7C3AED" />
+                        )}
                         {tieneMira  && <Badge label="MIRA"  color="#2563EB" />}
                         {tieneFimlm && <Badge label="FIMLM" color="#16A34A" />}
-                        {col.dones?.slice(0,2).map((d) => <Badge key={d} label={d} color="#C8A24A" />)}
                       </div>
                     </div>
 
@@ -447,38 +451,20 @@ export default function ColaboradoresPage() {
                         )}
                       </div>
 
-                      {col.dones?.length > 0 && (
-                        <div className="mt-3">
-                          <p className="text-xs font-semibold mb-1" style={{ color: '#6B7280' }}>Dones</p>
+                      {/* Categorías expandidas con color de fondo por categoría */}
+                      {[
+                        { label: 'Dones',          items: col.dones,   color: '#C8A24A', bg: '#FEF9EC' },
+                        { label: 'Labores Iglesia', items: col.labores, color: '#7C3AED', bg: '#F5F3FF' },
+                        { label: 'MIRA',            items: col.mira,    color: '#2563EB', bg: '#EFF6FF' },
+                        { label: 'FIMLM',           items: col.fimlm,   color: '#16A34A', bg: '#F0FDF4' },
+                      ].filter(({ items }) => items?.length > 0).map(({ label, items, color, bg }) => (
+                        <div key={label} className="mt-2 p-2 rounded-xl" style={{ backgroundColor: bg }}>
+                          <p className="text-xs font-bold mb-1.5" style={{ color }}>{label}</p>
                           <div className="flex flex-wrap gap-1">
-                            {col.dones.map((d) => <Badge key={d} label={d} color="#C8A24A" />)}
+                            {items.map((item: string) => <Badge key={item} label={item} color={color} />)}
                           </div>
                         </div>
-                      )}
-                      {col.labores?.length > 0 && (
-                        <div className="mt-3">
-                          <p className="text-xs font-semibold mb-1" style={{ color: '#6B7280' }}>Labores Iglesia</p>
-                          <div className="flex flex-wrap gap-1">
-                            {col.labores.map((l) => <Badge key={l} label={l} color="#7C3AED" />)}
-                          </div>
-                        </div>
-                      )}
-                      {col.mira?.length > 0 && (
-                        <div className="mt-3">
-                          <p className="text-xs font-semibold mb-1" style={{ color: '#6B7280' }}>MIRA</p>
-                          <div className="flex flex-wrap gap-1">
-                            {col.mira.map((m) => <Badge key={m} label={m} color="#2563EB" />)}
-                          </div>
-                        </div>
-                      )}
-                      {col.fimlm?.length > 0 && (
-                        <div className="mt-3">
-                          <p className="text-xs font-semibold mb-1" style={{ color: '#6B7280' }}>FIMLM</p>
-                          <div className="flex flex-wrap gap-1">
-                            {col.fimlm.map((f) => <Badge key={f} label={f} color="#16A34A" />)}
-                          </div>
-                        </div>
-                      )}
+                      ))}
                       {col.observaciones && (
                         <div className="mt-3 p-2 rounded-lg text-xs" style={{ backgroundColor: '#FEF9EC', color: '#92400E' }}>
                           <strong>Obs:</strong> {col.observaciones}
