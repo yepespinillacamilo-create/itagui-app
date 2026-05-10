@@ -55,7 +55,7 @@ const EMPTY_FORM = {
   observaciones: '',
 };
 
-type FiltroTab = 'todos' | 'dones' | 'labores' | 'mira' | 'fimlm';
+type FiltroTab = 'todos' | 'dones' | 'labores' | 'mira' | 'fimlm' | 'horario';
 
 // ── Helpers ──────────────────────────────────────────────────
 function toggle(arr: string[], val: string): string[] {
@@ -100,11 +100,11 @@ function CheckGroup({
 
 // ── Componente principal ──────────────────────────────────────
 export default function ColaboradoresPage() {
-  const [colaboradores, setColaboradores] = useState<Colaborador[]>([]);
-  const [cargando, setCargando]           = useState(true);
-  const [buscar, setBuscar]               = useState('');
-  const [filtroTab, setFiltroTab]         = useState<FiltroTab>('todos');
-  const [filtroValor, setFiltroValor]     = useState('');
+  const [todos, setTodos]       = useState<Colaborador[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [buscar, setBuscar]     = useState('');
+  const [filtroTab, setFiltroTab]     = useState<FiltroTab>('todos');
+  const [filtroValor, setFiltroValor] = useState('');
 
   const [modal, setModal]         = useState<'nuevo' | 'editar' | null>(null);
   const [editando, setEditando]   = useState<Colaborador | null>(null);
@@ -120,31 +120,42 @@ export default function ColaboradoresPage() {
   const [expandido, setExpandido] = useState<number | null>(null);
   const [toast, setToast] = useState('');
 
+  // Cargar TODOS los colaboradores una sola vez
   useEffect(() => { cargar(); }, []);
 
   async function cargar() {
     setCargando(true);
     try {
-      const params = new URLSearchParams();
-      if (buscar)      params.set('buscar', buscar);
-      if (filtroValor) {
-        if (filtroTab === 'dones')   params.set('don',   filtroValor);
-        if (filtroTab === 'labores') params.set('labor', filtroValor);
-        if (filtroTab === 'mira')    params.set('mira',  filtroValor);
-        if (filtroTab === 'fimlm')   params.set('fimlm', filtroValor);
-      }
-      const res = await fetch(`/api/colaboradores?${params}`);
+      const res  = await fetch('/api/colaboradores');
       const data = await res.json();
-      setColaboradores(Array.isArray(data) ? data : []);
+      setTodos(Array.isArray(data) ? data : []);
     } catch (e) { console.error(e); }
     finally { setCargando(false); }
   }
 
-  useEffect(() => {
-    const t = setTimeout(cargar, 300);
-    return () => clearTimeout(t);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [buscar, filtroTab, filtroValor]);
+  // Filtrado local — instantáneo, sin consultas al servidor
+  const colaboradores = (() => {
+    let lista = todos;
+    if (buscar.trim()) {
+      const b = buscar.toLowerCase();
+      lista = lista.filter((c) =>
+        c.nombre.toLowerCase().includes(b) ||
+        (c.cedula  ?? '').includes(b)       ||
+        (c.celular ?? '').includes(b)
+      );
+    }
+    if (filtroValor) {
+      if (filtroTab === 'dones')   lista = lista.filter((c) => c.dones?.includes(filtroValor));
+      if (filtroTab === 'labores') lista = lista.filter((c) => c.labores?.includes(filtroValor));
+      if (filtroTab === 'mira')    lista = lista.filter((c) => c.mira?.includes(filtroValor));
+      if (filtroTab === 'fimlm')   lista = lista.filter((c) => c.fimlm?.includes(filtroValor));
+      if (filtroTab === 'horario') lista = lista.filter((c) => c.horario === filtroValor);
+    } else {
+      if (filtroTab === 'mira')  lista = lista.filter((c) => (c.mira?.length  ?? 0) > 0);
+      if (filtroTab === 'fimlm') lista = lista.filter((c) => (c.fimlm?.length ?? 0) > 0);
+    }
+    return lista;
+  })();
 
   function showToast(msg: string) {
     setToast(msg);
@@ -250,7 +261,8 @@ export default function ColaboradoresPage() {
     filtroTab === 'dones'   ? DONES    :
     filtroTab === 'labores' ? LABORES  :
     filtroTab === 'mira'    ? MIRA_ROLES :
-    filtroTab === 'fimlm'   ? FIMLM_ROLES : [];
+    filtroTab === 'fimlm'   ? FIMLM_ROLES :
+    filtroTab === 'horario' ? ['7:00 AM', '6:30 PM'] : [];
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F3F4F6' }}>
@@ -299,6 +311,7 @@ export default function ColaboradoresPage() {
             { key: 'todos',   label: 'Todos'   },
             { key: 'dones',   label: 'Dones'   },
             { key: 'labores', label: 'Labores' },
+            { key: 'horario', label: 'Horario' },
             { key: 'mira',    label: 'MIRA'    },
             { key: 'fimlm',   label: 'FIMLM'   },
           ] as { key: FiltroTab; label: string }[]).map(({ key, label }) => (
@@ -366,7 +379,7 @@ export default function ColaboradoresPage() {
                       className="flex-shrink-0 w-14 h-14 rounded-full overflow-hidden border-2 flex items-center justify-center"
                       style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}>
                       {col.foto
-                        ? <Image src={col.foto} alt={col.nombre} width={56} height={56} className="object-cover w-full h-full" unoptimized />
+                        ? <Image src={col.foto} alt={col.nombre} width={128} height={128} className="object-cover w-full h-full" unoptimized />
                         : <User size={24} style={{ color: '#9CA3AF' }} />
                       }
                     </button>
@@ -530,6 +543,16 @@ export default function ColaboradoresPage() {
                       style={{ borderColor: '#E5E7EB' }}
                       value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
                   </div>
+                  <div>
+                    <label className="text-xs font-medium block mb-1" style={{ color: '#374151' }}>Culto al que asiste</label>
+                    <select className="w-full border rounded-xl px-3 py-2 text-sm outline-none bg-white"
+                      style={{ borderColor: '#E5E7EB' }}
+                      value={form.horario}
+                      onChange={(e) => setForm((f) => ({ ...f, horario: e.target.value }))}>
+                      <option value="7:00 AM">7:00 AM — Mañana</option>
+                      <option value="6:30 PM">6:30 PM — Tarde/Noche</option>
+                    </select>
+                  </div>
                 </div>
               </section>
 
@@ -540,7 +563,7 @@ export default function ColaboradoresPage() {
                   <div className="w-16 h-16 rounded-full overflow-hidden border-2 flex items-center justify-center flex-shrink-0"
                     style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}>
                     {form.foto
-                      ? <Image src={form.foto} alt="foto" width={64} height={64} className="object-cover w-full h-full" unoptimized />
+                      ? <Image src={form.foto} alt="foto" width={128} height={128} className="object-cover w-full h-full" unoptimized />
                       : <User size={24} style={{ color: '#9CA3AF' }} />
                     }
                   </div>
@@ -682,7 +705,7 @@ export default function ColaboradoresPage() {
           style={{ backgroundColor: 'rgba(0,0,0,0.92)' }}
           onClick={() => setFotoVisor(null)}>
           <div className="relative max-w-md w-full px-4" onClick={(e) => e.stopPropagation()}>
-            <Image src={fotoVisor.src} alt={fotoVisor.nombre} width={400} height={500}
+            <Image src={fotoVisor.src} alt={fotoVisor.nombre} width={800} height={1000}
               className="w-full rounded-2xl object-contain" style={{ maxHeight: '75dvh' }} unoptimized />
             <p className="text-white text-center font-semibold mt-3">{fotoVisor.nombre}</p>
           </div>
