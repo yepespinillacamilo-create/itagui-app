@@ -4,19 +4,18 @@ import { getSupabase } from '@/lib/supabase';
 // ── Sincroniza con la tabla de estudiantes del Instituto ──────
 async function sincronizarInstituto(
   sb: ReturnType<typeof getSupabase>,
-  col: { nombre: string; cedula: string | null; celular: string | null; foto: string | null; dones: string[] }
+  col: { nombre: string; cedula: string | null; celular: string | null; foto: string | null; dones: string[]; horario?: string | null }
 ) {
   if (!col.cedula) return;
   const tieneInstituto = col.dones.includes('Instituto Bíblico');
 
   if (tieneInstituto) {
-    // Agregar o actualizar en estudiantes
     await sb.from('estudiantes').upsert(
-      { nombre: col.nombre, cedula: col.cedula, celular: col.celular || null, foto: col.foto || null, activo: 1 },
+      { nombre: col.nombre, cedula: col.cedula, celular: col.celular || null,
+        foto: col.foto || null, activo: 1, horario: col.horario || '7:00 AM' },
       { onConflict: 'cedula' }
     );
   } else {
-    // Si ya existía como estudiante, marcarlo inactivo
     await sb.from('estudiantes').update({ activo: 0 }).eq('cedula', col.cedula);
   }
 }
@@ -83,11 +82,9 @@ export async function POST(req: NextRequest) {
 
     // Sincronizar con Instituto Bíblico
     await sincronizarInstituto(sb, {
-      nombre: nombre.trim(),
-      cedula: cedula?.trim() || null,
-      celular: celular?.trim() || null,
-      foto: foto || null,
-      dones: donesArr,
+      nombre: nombre.trim(), cedula: cedula?.trim() || null,
+      celular: celular?.trim() || null, foto: foto || null,
+      dones: donesArr, horario: horario?.trim() || '7:00 AM',
     });
 
     return NextResponse.json(data, { status: 201 });
@@ -135,11 +132,9 @@ export async function PUT(req: NextRequest) {
 
     // Sincronizar con Instituto Bíblico automáticamente
     await sincronizarInstituto(sb, {
-      nombre: nombre.trim(),
-      cedula: cedula?.trim() || null,
-      celular: celular?.trim() || null,
-      foto: foto || null,
-      dones: donesArr,
+      nombre: nombre.trim(), cedula: cedula?.trim() || null,
+      celular: celular?.trim() || null, foto: foto || null,
+      dones: donesArr, horario: horario?.trim() || '7:00 AM',
     });
 
     return NextResponse.json(data);
