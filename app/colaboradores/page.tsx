@@ -140,6 +140,8 @@ export default function ColaboradoresPage() {
   // Filtrado local — instantáneo, sin consultas al servidor
   const colaboradores = (() => {
     let lista = todos;
+    // Filtro principal por horario del culto
+    if (filtroHorario) lista = lista.filter((c) => c.horario === filtroHorario);
     if (buscar.trim()) {
       const b = buscar.toLowerCase();
       lista = lista.filter((c) =>
